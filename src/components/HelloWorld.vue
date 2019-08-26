@@ -14,9 +14,9 @@
         prop="bucket">
       </el-table-column>
       <el-table-column label="操作">
-        <template>
+        <template v-slot:default="{ row }">
           <el-button type="primary">管理</el-button>
-          <el-button type="danger">删除</el-button>
+          <el-button type="danger" @click="onDelete(row)">删除</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -68,24 +68,64 @@ export default {
     }
   },
   methods: {
-    addBucket () {
-      axios.post(`http://ad.huishimed.com:3000/buckets`, this.form)
+    getList() {
+      axios.get(`http://ad.huishimed.com:3000/bucket`)
         .then(res => {
           // eslint-disable-next-line no-console
           console.log(res)
+          if (res.status === 200) {
+            this.data = res.data
+          }
+        })
+    },
+    addBucket () {
+      axios.post(`http://ad.huishimed.com:3000/bucket`, this.form)
+        .then(res => {
+          // eslint-disable-next-line no-console
+          console.log(res)
+          this.dialogVisible = false
+          this.getList()
+        })
+    },
+    onDelete (row) {
+      this.$confirm('此操作将永久删除该存储空间, 是否继续?', '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }).then(() => {
+        this.handleDelete(row.bucket)
+      }).catch(() => {
+        this.$message({
+          type: 'info',
+          message: '已取消删除'
+        });          
+      });
+    },
+    handleDelete (bucketName) {
+      axios.delete(`http://ad.huishimed.com:3000/bucket/${bucketName}`)
+        .then(res => {
+          const { data: { code, msg: message } } = res
+          if (code === 20000) {
+            this.$message({
+              type: 'message',
+              message
+            })
+            this.getList()
+          } else {
+            this.$message({
+              type: 'error',
+              message: '删除失败'
+            });  
+          }
+        })
+        .catch(err => {
+          // eslint-disable-next-line no-console
+          console.log('err', err)
         })
     }
   },
   created () {
-    axios.get(`http://ad.huishimed.com:3000/buckets`)
-      .then(res => {
-        // eslint-disable-next-line no-console
-        console.log(res)
-        if (res.status === 200) {
-          this.data = res.data
-        }
-      })
-
+    this.getList()
     axios.get(`http://ad.huishimed.com:3000/options/zone`)
       .then(res => {
         // eslint-disable-next-line no-console
